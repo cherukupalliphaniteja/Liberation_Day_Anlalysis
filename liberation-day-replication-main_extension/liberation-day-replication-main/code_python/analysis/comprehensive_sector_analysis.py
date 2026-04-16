@@ -42,13 +42,76 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Load pre-computed results
+# Priority: BigQuery -> local .npz files
 # ---------------------------------------------------------------------------
+_USE_BQ = os.environ.get("USE_LOCAL_DATA", "0") != "1"
+
+
+def _bq():
+    import sys
+    if REPO_ROOT not in sys.path:
+        sys.path.insert(0, REPO_ROOT)
+    from database import bq_client
+    return bq_client
+
+
+def _load_ge_array_from_bq():
+    """
+    Pull GE results from BigQuery and return a (194, 7, 9) numpy array.
+
+    Metric axis-1 order (matches .npz baseline_results layout):
+        0  welfare_pct
+        1  trade_deficit_pct
+        2  exports_pct
+        3  imports_pct
+        4  employment_pct
+        5  cpi_pct
+        6  tariff_rev_pct
+    """
+    _, arr = _bq().get_baseline_results_array()
+    return arr
+
+
 def load_results():
-    baseline  = np.load(os.path.join(OUTPUT_DIR, 'baseline_results.npz'),  allow_pickle=True)
-    mfg       = np.load(os.path.join(OUTPUT_DIR, 'sector_manufacturing_results.npz'), allow_pickle=True)
-    pharma    = np.load(os.path.join(OUTPUT_DIR, 'sector_pharma_results.npz'),        allow_pickle=True)
-    retail    = np.load(os.path.join(OUTPUT_DIR, 'sector_retail_results.npz'),        allow_pickle=True)
-    multi     = np.load(os.path.join(OUTPUT_DIR, 'multisector_baseline_results.npz'), allow_pickle=True)
+    """
+    Load all results needed by the comprehensive analysis.
+
+    Returns (baseline, mfg, pharma, retail, multi) — each a dict-like object
+    (NpzFile from disk, or a plain dict when loaded from BigQuery).
+
+    BigQuery path: baseline comes from the `ge_results` BQ table.
+    Sector-specific results (mfg, pharma, retail, multi) still come from
+    local .npz files when available.
+    """
+    # --- baseline: try BigQuery first ---
+    if _USE_BQ:
+        try:
+            arr = _load_ge_array_from_bq()
+            # Wrap as a dict so callers using baseline['results'] still work
+            baseline = {"results": arr}
+            print("[load_results] Loaded baseline from BigQuery.")
+        except Exception as e:
+            print(f"[load_results] BigQuery failed ({e}); falling back to .npz")
+            baseline = np.load(
+                os.path.join(OUTPUT_DIR, 'baseline_results.npz'), allow_pickle=True
+            )
+    else:
+        baseline = np.load(
+            os.path.join(OUTPUT_DIR, 'baseline_results.npz'), allow_pickle=True
+        )
+
+    # --- sector results: local .npz (not yet in BigQuery) ---
+    def _safe_load(fname):
+        path = os.path.join(OUTPUT_DIR, fname)
+        if os.path.exists(path):
+            return np.load(path, allow_pickle=True)
+        return {}
+
+    mfg    = _safe_load('sector_manufacturing_results.npz')
+    pharma = _safe_load('sector_pharma_results.npz')
+    retail = _safe_load('sector_retail_results.npz')
+    multi  = _safe_load('multisector_baseline_results.npz')
+
     return baseline, mfg, pharma, retail, multi
 
 # ---------------------------------------------------------------------------

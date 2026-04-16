@@ -11,12 +11,32 @@ Handles:
   - Loading pharma bilateral trade weights
   - Loading Cavallo et al. daily price indices
   - Loading the US 2025 HTS8 tariff schedule
+
+Data source priority
+--------------------
+All functions try BigQuery first, then fall back to local CSV/NPY files.
+To force local-file mode (e.g., offline), set the environment variable:
+    export USE_LOCAL_DATA=1
 """
 
 import os
 import json
 import numpy as np
 import pandas as pd
+
+# ---------------------------------------------------------------------------
+# BigQuery toggle — set USE_LOCAL_DATA=1 to skip BQ and always use files
+# ---------------------------------------------------------------------------
+_USE_BQ = os.environ.get("USE_LOCAL_DATA", "0") != "1"
+
+def _bq():
+    """Lazy import of bq_client so local-only usage never imports google libs."""
+    import sys
+    _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+    from database import bq_client
+    return bq_client
 
 # ---------------------------------------------------------------------------
 # Path resolution
@@ -57,15 +77,8 @@ def load_icio_sector_multipliers(beta_labor=0.49):
     """
     Compute US sector-specific IO multipliers from the 2022 OECD ICIO data.
 
-    The pre-processed ICIO coefficient matrix (4050x4050) stores, for each
-    (source_sector, destination_sector) pair, the share of destination sector
-    output whose intermediate inputs come from source_sector.  Column sums = 1.
-
-    For each US model sector we:
-      1. Find the subset of columns corresponding to USA x that model sector.
-      2. Sum the rows from non-USA sources  ->  intermediate import share.
-      3. Compute the Leontief-style roundabout multiplier:
-             M = 1 / (1 - (1 - beta_labor) * import_share_interm)
+    Tries BigQuery first (SQL aggregation over 77M rows — fast on BQ).
+    Falls back to local NPY/CSV files if BQ is unavailable or disabled.
 
     Parameters
     ----------
@@ -78,22 +91,25 @@ def load_icio_sector_multipliers(beta_labor=0.49):
             'import_share_interm'   float  share of intermediates that are imported
             'io_multiplier'         float  roundabout supply-chain multiplier
     """
+    if _USE_BQ:
+        try:
+            return _bq().compute_icio_multipliers(year=2022, beta_labor=beta_labor)
+        except Exception as e:
+            print(f"[data_utils] BigQuery ICIO query failed ({e}); falling back to local files.")
+
+    # --- Local file fallback ---
     icio_dir = os.path.join(DATA_ROOT, 'processed', 'icio_2022')
 
-    # Load index (4050 rows: country x icio_sector pairs)
     idx = pd.read_csv(os.path.join(icio_dir, 'country_sector_index.csv'))
-
-    # Load sector mapping (adds model_sector column)
     smap = pd.read_csv(os.path.join(icio_dir, 'sector_map.csv'))
     idx = idx.merge(
         smap[['country_sector', 'model_sector']],
         on='country_sector', how='left'
     )
 
-    # Load IO coefficient matrix
     A = np.load(os.path.join(icio_dir, 'io_coeff_matrix.npy'))
 
-    usa_mask = (idx['country'] == 'USA').values
+    usa_mask     = (idx['country'] == 'USA').values
     non_usa_mask = ~usa_mask
 
     results = {}
@@ -104,18 +120,16 @@ def load_icio_sector_multipliers(beta_labor=0.49):
         if len(usa_sector_cols) == 0:
             continue
 
-        # Average intermediate import share across all ICIO sub-sectors
         shares = []
         for col in usa_sector_cols:
-            col_import_share = float(A[non_usa_mask, col].sum())
-            shares.append(col_import_share)
+            shares.append(float(A[non_usa_mask, col].sum()))
 
-        imp_share = float(np.mean(shares))
+        imp_share  = float(np.mean(shares))
         multiplier = 1.0 / (1.0 - (1.0 - beta_labor) * imp_share)
 
         results[model_sector] = {
             'import_share_interm': imp_share,
-            'io_multiplier': multiplier,
+            'io_multiplier':       multiplier,
         }
 
     return results
@@ -173,18 +187,48 @@ def load_pharma_trade_weights(tariffs_csv=None, country_labels_csv=None):
     Load actual pharma bilateral trade weights (132 exporting countries)
     and join with Liberation Day tariff rates.
 
-    Parameters
-    ----------
-    tariffs_csv : str or None
-        Path to base_data/tariffs.csv.  Auto-resolved if None.
-    country_labels_csv : str or None
-        Path to base_data/country_labels.csv.  Auto-resolved if None.
+    Tries BigQuery first (joins baci_trade + tariffs).
+    Falls back to local CSV files if BQ is unavailable or disabled.
 
     Returns
     -------
     DataFrame with columns:
         iso3, trade_value_usd, weight, applied_tariff (NaN if not matched)
     """
+    if _USE_BQ:
+        try:
+            bq = _bq()
+            # Pull pharma-relevant HS chapters (29, 30) from BACI and join tariffs
+            df = bq.query(f"""
+                WITH pharma AS (
+                    SELECT
+                        exporter_iso3   AS iso3,
+                        SUM(value_1000usd * 1000) AS trade_value_usd
+                    FROM `liberation-day-analysis.liberation_day.baci_trade`
+                    WHERE importer_iso3 = 'USA'
+                      AND (CAST(hs6_product_code AS STRING) LIKE '29%'
+                           OR CAST(hs6_product_code AS STRING) LIKE '30%')
+                    GROUP BY exporter_iso3
+                ),
+                total AS (
+                    SELECT SUM(trade_value_usd) AS grand_total FROM pharma
+                )
+                SELECT
+                    p.iso3,
+                    p.trade_value_usd,
+                    p.trade_value_usd / t2.grand_total AS weight,
+                    t.tariff_pct / 100.0              AS applied_tariff
+                FROM pharma p
+                CROSS JOIN total t2
+                LEFT JOIN `liberation-day-analysis.liberation_day.tariffs` t
+                    ON p.iso3 = t.iso3
+                ORDER BY p.trade_value_usd DESC
+            """)
+            return df
+        except Exception as e:
+            print(f"[data_utils] BigQuery pharma weights failed ({e}); falling back to local files.")
+
+    # --- Local file fallback ---
     base = os.path.join(DATA_ROOT, 'base_data')
     if tariffs_csv is None:
         tariffs_csv = os.path.join(base, 'tariffs.csv')
@@ -195,22 +239,16 @@ def load_pharma_trade_weights(tariffs_csv=None, country_labels_csv=None):
         os.path.join(DATA_ROOT, 'processed', 'shocks', 'pharma_trade_weights.csv')
     )
 
-    # Load tariff schedule and country codes
     tariffs = pd.read_csv(tariffs_csv)
     labels  = pd.read_csv(country_labels_csv)
 
-    # tariffs.csv has one row per country in the GE model (194 rows, no header key)
-    # Align by position with country_labels
     if 'iso3' not in tariffs.columns:
         tariffs = tariffs.copy()
         tariffs['iso3'] = labels['iso3'].values[:len(tariffs)]
 
     tariffs = tariffs.rename(columns={'applied_tariff': 'tau_country'})
 
-    merged = weights.merge(
-        tariffs[['iso3', 'tau_country']],
-        on='iso3', how='left'
-    )
+    merged = weights.merge(tariffs[['iso3', 'tau_country']], on='iso3', how='left')
     return merged
 
 
