@@ -15,18 +15,23 @@ Usage
     df = get_ge_results()          # 1,746-row DataFrame
     mults = compute_icio_multipliers(year=2022)  # dict sector->multiplier
 
-Authentication
---------------
-Run once per machine:
-    gcloud auth application-default login
+Authentication — auto-detected in this order
+--------------------------------------------
+1. Google Colab           : authenticated automatically via colab.auth
+2. GCP environment        : Cloud Run / Vertex AI / Colab Enterprise (no setup)
+3. Application Default    : gcloud auth application-default login  (local machines)
+4. GOOGLE_APPLICATION_CREDENTIALS env var pointing to a service-account JSON key
+5. Public / anonymous     : works when the dataset is made public in GCP Console
 
-Environment variable overrides:
+Environment variable overrides
+-------------------------------
     BQ_PROJECT  (default: liberation-day-analysis)
     BQ_DATASET  (default: liberation_day)
 """
 
 import os
 import functools
+import sys
 
 import pandas as pd
 
@@ -43,11 +48,72 @@ DATASET = os.environ.get("BQ_DATASET", "liberation_day")
 _CLIENT: "bigquery.Client | None" = None
 
 
+def _is_colab() -> bool:
+    try:
+        import google.colab  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def _make_client() -> "bigquery.Client":
+    """
+    Build a BigQuery client using the best available credentials.
+
+    Priority:
+      1. Colab interactive auth
+      2. google.auth.default() — covers ADC, GCP metadata server, env-var key
+      3. AnonymousCredentials  — read-only access to public datasets
+    """
+    # 1. Colab
+    if _is_colab():
+        try:
+            from google.colab import auth as colab_auth
+            colab_auth.authenticate_user()
+            import google.auth
+            creds, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
+            return bigquery.Client(project=PROJECT, credentials=creds)
+        except Exception:
+            pass  # fall through to next method
+
+    # 2. Application Default Credentials (gcloud auth / GCP metadata / env key)
+    try:
+        import google.auth
+        creds, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        return bigquery.Client(project=PROJECT, credentials=creds)
+    except Exception:
+        pass
+
+    # 3. Anonymous — works for public BigQuery datasets (read-only)
+    try:
+        from google.auth.credentials import AnonymousCredentials
+        print(
+            "[bq_client] No credentials found — connecting as anonymous user.\n"
+            "  This works only if the dataset is public.\n"
+            "  For full access run:  gcloud auth application-default login\n"
+        )
+        return bigquery.Client(project=PROJECT, credentials=AnonymousCredentials())
+    except Exception as exc:
+        raise RuntimeError(
+            "\n[bq_client] Could not authenticate with BigQuery.\n\n"
+            "Fix (pick one):\n"
+            "  A) Local machine  : gcloud auth application-default login\n"
+            "  B) Google Colab   : this is handled automatically — just re-run\n"
+            "  C) Jupyter/other  : set env var GOOGLE_APPLICATION_CREDENTIALS "
+            "to a service-account key path\n"
+            f"\nOriginal error: {exc}"
+        ) from exc
+
+
 def _client() -> "bigquery.Client":
     """Return (or lazily create) the shared BigQuery client."""
     global _CLIENT
     if _CLIENT is None:
-        _CLIENT = bigquery.Client(project=PROJECT)
+        _CLIENT = _make_client()
     return _CLIENT
 
 
