@@ -46,3 +46,6 @@ data/sectoral_tariffs/ref_isic33_vbeta1-2024-12.dta
 
 # Log files
 *.log
+
+# Database file (4+ GB, generated locally by database/build_database.py)
+database/*.duckdb
