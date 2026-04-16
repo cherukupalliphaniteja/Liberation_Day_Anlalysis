@@ -1,0 +1,95 @@
+==============================================================================
+LIBERATION DAY TARIFFS — COMPREHENSIVE SECTOR ANALYSIS SUMMARY
+Ignatenko, Macedoni, Lashkaripour, Simonovska (2025)
+Generated: comprehensive_sector_analysis.py
+==============================================================================
+
+── OVERALL MACRO PICTURE ─────────────────────────────────────────────────
+
+Scenario                         US Welf    US CPI   US Imports   US Employ
+---------------------------------------------------------------------------
+Lib Day (No Ret.)                 +1.13%    +12.81%      -43.59%      +0.32%
+Lib Day (Armington)               +1.36%     +7.93%      -28.83%      +0.30%
+Eaton-Kortum                      +1.24%    +10.91%      -33.31%      +0.41%
+Optimal US (No Ret.)              +1.79%    +12.60%      -45.57%      +0.51%
+Lib + Opt Ret.                    -0.95%     +5.09%      -61.69%      -0.39%
+Lib + Recip Ret.                  -0.36%     +7.48%      -56.26%      -0.18%
+Nash Equilibrium                  -0.54%     +3.29%      -60.17%      -0.27%
+Lump-Sum Rebate                   -0.01%    +13.13%      -43.36%      -0.41%
+High Elasticity                   +0.33%    +11.76%      -58.01%      +0.10%
+
+                               Best for US (unilateral): Scenario 4 — Optimal US Tariff, No Retaliation (+1.79% welfare)
+                               Best globally: Negotiated free trade (scenario not run = no tariffs baseline)
+                               Nash equilibrium (scenario 7): US welfare -0.54%, all countries lose
+
+── MANUFACTURING ────────────────────────────────────────────────────────
+  Effective tariff (Liberation Day):    27.0%
+  HTS8 structural product rate:          3.61%
+  IO supply-chain multiplier:            1.094x
+  Import penetration:                    32.3%
+  CPI contribution (manufacturing):     +6.79%
+  US import volume change:              -80.8%
+  → Manufacturing is the DOMINANT sector for tariff impact.
+  → At 27% effective tariff, US manufacturing imports drop ~81%.
+  → Supply chains restructure, but IO multiplier amplifies price rises.
+
+── PHARMACEUTICALS ──────────────────────────────────────────────────────
+  Effective tariff (trade-weighted):     19.9%
+  HTS8 structural rate:                  2.45%
+  IO supply-chain multiplier:            1.067x
+  Pharma intermediate import share:      12.4%
+  Price increase (IO-adjusted):         +0.495%
+  Import volume change:                  -38.2%
+  Supplier HHI: pre=580, post=591 (+11)
+  Consumer welfare loss (pharma):        -0.0134%
+  → Pharma price impact is 0.07× the economy-wide CPI.
+  → Supplier concentration increases → less competition → higher prices persist.
+  → 132 supplier countries face import collapse; US-sourced production rises.
+
+── RETAIL / CONSUMER GOODS ──────────────────────────────────────────────
+  First-order CPI estimate:             +13.55%
+  GE model CPI (no retaliation):        +7.09%
+  GE model CPI (retaliation):           +4.38%
+  US welfare (no retaliation):          +0.598%
+  US welfare (retaliation):             -1.025%
+  GE amplification factor:               0.523x (GE damps first-order)
+  Regressivity ratio (Q1/Q5):            1.41x
+  Quintile price burden (no retal):
+    Q1 (Lowest): 8.40% (no ret.) | 5.18% (with ret.)
+    Q2: 7.58% (no ret.) | 4.68% (with ret.)
+    Q3 (Middle): 7.17% (no ret.) | 4.43% (with ret.)
+    Q4: 6.35% (no ret.) | 3.92% (with ret.)
+    Q5 (Highest): 5.94% (no ret.) | 3.67% (with ret.)
+  → Tariffs act as a REGRESSIVE tax: lowest earners pay 1.41× more as % of income.
+  → GE substitution and trade diversion dampen the first-order CPI by ~48%.
+
+── OPTIMAL TARIFF ANALYSIS ──────────────────────────────────────────────
+  Optimal US tariff (no retaliation):
+    US welfare:   +1.79% (BEST for US unilaterally)
+    China:        -0.85%
+    Canada:       -2.65%
+    Mexico:       -3.50%
+    EU avg:       0.01%
+  Nash equilibrium (all countries optimize simultaneously):
+    US welfare:   -0.54% — US LOSES vs free trade
+    → Prisoner's dilemma: optimal for each, worst collectively.
+
+── LONG-RUN CONTINUATION RISKS ──────────────────────────────────────────
+  If Liberation Day tariffs continue 3-5 years:
+  1. Supply chain restructuring reduces tariff effectiveness (welfare gain erodes)
+  2. Pharma supplier concentration locks in higher prices (HHI persists)
+  3. Regressive consumer burden (Q1 households) accumulates over time
+  4. Trading partners diversify away from US exports (permanent trade loss)
+  5. Global trade at -9% to -13% depending on retaliation depth
+  6. Nash equilibrium trap: all countries worse off but can't unilaterally exit
+
+── WHAT IS BEST FOR THE US? ─────────────────────────────────────────────
+  Short-term (unilateral): Scenario 4 — Optimal US tariff, no retaliation
+    → US gains +1.79% welfare, but requires partners NOT to retaliate
+  Long-term (with retaliation): Negotiate bilateral FTA deals
+    → Nash equilibrium is unavoidable without coordinated exit
+    → Lump-sum rebate of tariff revenue to consumers nearly offsets all gains/losses
+  For other countries: Liberation Day is strictly negative; prefer free trade
+    → China, Canada, Mexico all better off in any scenario with lower US tariffs
+
+==============================================================================
