@@ -1,0 +1,104 @@
+
+====================================================================
+  1. TARIFF LANDSCAPE
+====================================================================
+  Countries with tariff data: 194
+  Tariff range: 0.0% – 54.0%
+  Mean tariff : 16.64%   Median: 10.0%
+  Top 5 tariff countries: CHN, LSO, KHM, LAO, MDG
+  Flat 10% floor countries: 109
+
+====================================================================
+  2. BACI TRADE STRUCTURE (US imports, 2023)
+====================================================================
+  Total US imports (BACI 2023): $2700B
+  Top 5 partners: MEX, CHN, CAN, DEU, JPN
+  Top 5 share of total: 60.2%
+  Top 9 HS chapters account for 80% of US imports
+
+====================================================================
+  3. GE RESULTS — WELFARE DISTRIBUTION ACROSS COUNTRIES
+====================================================================
+  Scenario 0 (Lib Day No Ret): median welfare +0.051%
+  Scenario 4 (Opt Retaliation): median welfare -0.057%
+
+====================================================================
+  4. SURROGATE TRAINING DATA EDA
+====================================================================
+  Training rows: 4,356
+  Features: us_tariff, china_rate, eu_rate, canmex_rate
+  Targets : welfare_us, cpi_us, employment_us, trade_deficit_us, hhi_pharma, welfare_china, welfare_eu
+    us_tariff: 11 unique values  [0.00 – 1.00]
+    china_rate: 11 unique values  [0.00 – 1.00]
+    eu_rate: 6 unique values  [0.00 – 0.50]
+    canmex_rate: 6 unique values  [0.00 – 0.50]
+    welfare_us: mean=0.310  std=0.484  min=-1.261  max=1.727
+    cpi_us: mean=27.260  std=19.253  min=-4.550  max=58.818
+    employment_us: mean=0.086  std=0.156  min=-0.468  max=0.495
+    trade_deficit_us: mean=-29.491  std=8.886  min=-38.147  max=0.000
+    welfare_china: mean=-1.824  std=1.221  min=-3.925  max=0.281
+    welfare_eu: mean=-0.276  std=0.124  min=-0.454  max=0.169
+  Strongest feature-target correlation: us_tariff -> cpi_us  r=0.999
+
+====================================================================
+  5. SURROGATE BIAS ANALYSIS (raw vs corrected vs true)
+====================================================================
+  Validation scenarios: 9
+  Columns: ['scenario_id', 'scenario_name', 'us_tariff', 'china_rate', 'eu_rate', 'canmex_rate', 'welfare_us_true', 'welfare_us_pred', 'welfare_us_ci_low', 'welfare_us_ci_high', 'welfare_us_error', 'cpi_us_true', 'cpi_us_pred', 'cpi_us_ci_low', 'cpi_us_ci_high', 'cpi_us_error', 'employment_us_true', 'employment_us_pred', 'employment_us_ci_low', 'employment_us_ci_high', 'employment_us_error', 'trade_deficit_us_true', 'trade_deficit_us_pred', 'trade_deficit_us_ci_low', 'trade_deficit_us_ci_high', 'trade_deficit_us_error', 'welfare_china_true', 'welfare_china_pred', 'welfare_china_ci_low', 'welfare_china_ci_high', 'welfare_china_error', 'welfare_eu_true', 'welfare_eu_pred', 'welfare_eu_ci_low', 'welfare_eu_ci_high', 'welfare_eu_error']
+    welfare_us              MAE=0.8961  mean_bias=+0.7853
+    cpi_us                  MAE=5.6827  mean_bias=+5.0407
+    employment_us           MAE=0.3186  mean_bias=+0.2917
+    trade_deficit_us        MAE=6.2331  mean_bias=-2.5529
+    welfare_china           MAE=0.4444  mean_bias=-0.2071
+    welfare_eu              MAE=0.2709  mean_bias=-0.2709
+  
+  Retaliation scenarios: 5 — sign correct in 2/5 cases
+    (true welfare_us for retaliation: [1.13, 1.789, -0.949, -0.359, -0.544])
+
+====================================================================
+  6. OECD ICIO SUPPLY CHAIN EDA (2022)
+====================================================================
+  Computing US sector IO multipliers via BigQuery aggregation...
+  US sectors analysed: 56
+  Most import-dependent: T (share=1.000)
+  Least import-dependent: GGFC (share=0.001)
+  Fetching top bilateral IO flows into USA...
+  Largest flow: OUT -> G  $4883.4B
+
+====================================================================
+  7. GRAVITY & TRADE STRUCTURE EDA
+====================================================================
+  Fetching US gravity variables (2019)...
+  US gravity pairs: 255
+    Distance elasticity of trade: -0.222 (log-log slope)
+    WTO members median imports: $1.06B
+    Non-WTO members median imports: $0.03B
+
+====================================================================
+  EDA COMPLETE — FIGURES SAVED
+====================================================================
+  
+19 figures saved to  eda/figures/:
+    1a_tariff_distribution.png
+    1b_tariff_top_bottom25.png
+    2a_baci_top_partners.png
+    2b_baci_hs_concentration.png
+    3a_us_outcomes_all_scenarios.png
+    3b_global_welfare_boxplot.png
+    3c_winners_losers.png
+    3d_welfare_heatmap_countries.png
+    3e_retaliation_impact.png
+    4a_feature_distributions.png
+    4b_target_distributions.png
+    4c_correlation_heatmap.png
+    4d_feature_target_scatter.png
+    5a_bias_true_vs_pred.png
+    5b_bias_scatter_all_targets.png
+    6a_icio_sector_multipliers.png
+    6b_icio_top_flows_usa.png
+    7a_gravity_distance_wto.png
+    7b_gravity_bubble_chart.png
+
+
+Generated by eda/eda_bigquery.py — Liberation Day Replication Project
+All data sourced from BigQuery: liberation-day-analysis.liberation_day
