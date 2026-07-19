@@ -113,7 +113,7 @@ def main():
     data_path = os.path.join(base_path, 'data', 'base_data', 'trade_cepii.csv')
     X_ji = pd.read_csv(data_path, header=0).values  # header=0 to skip header row
     # Convert to float, replacing any non-numeric values with NaN, then replace NaN with 0
-    X_ji = pd.DataFrame(X_ji).apply(pd.to_numeric, errors='coerce').fillna(0).values.copy()
+    X_ji = pd.DataFrame(X_ji).apply(pd.to_numeric, errors='coerce').fillna(0).values
     N = X_ji.shape[0]
 
     # Country IDs (convert from MATLAB 1-indexed to Python 0-indexed)
@@ -147,6 +147,7 @@ def main():
     E_i = Y_i + T
     X_ii = E_i - tot_imports
     X_ii[X_ii < 0] = 0
+    X_ji = X_ji.copy()
     np.fill_diagonal(X_ji, X_ii)
 
     # Recalculate after updating diagonal
