@@ -2,7 +2,7 @@ services:
   - type: web
     name: liberation-day-tariff-dashboard
     runtime: python
-    plan: starter
+    plan: free
     region: oregon
     branch: master
     rootDir: liberation-day-replication-main_extension/liberation-day-replication-main
