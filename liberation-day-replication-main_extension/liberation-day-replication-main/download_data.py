@@ -4,8 +4,16 @@ Run once after cloning: python download_data.py
 """
 
 import os
+import sys
 import ssl
+import urllib.parse
 import urllib.request
+
+# Windows consoles often default to cp1252, which can't encode the emoji
+# below; force UTF-8 so this doesn't crash under Streamlit/other wrappers.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 # SSL bypass for corporate/university networks with SSL inspection
 ssl_ctx = ssl.create_default_context()
@@ -62,7 +70,7 @@ def main():
             print(f"  ✅ Already exists ({size_mb:.0f}MB): {os.path.basename(local_path)}")
         else:
             all_present = False
-            url = f"{HF_BASE}/{hf_path}"
+            url = f"{HF_BASE}/{urllib.parse.quote(hf_path)}"
             try:
                 download_file(url, local_path)
             except Exception as e:
